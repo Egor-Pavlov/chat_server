@@ -56,8 +56,10 @@ public class ClientHandler implements Runnable {
     private void broadcast(String message) {
         synchronized (clients) {
             for (ClientHandler client : clients) {
-                //пишем в сокет, который слушают клиенты
-                client.out.println(message);
+                //пишем в сокет, который слушают клиенты (кроме сокета откуда пришло)
+                if (client != this)
+                    client.out.println(message);
+                else client.out.println("message successfully sent");
             }
         }
     }
@@ -74,8 +76,13 @@ public class ClientHandler implements Runnable {
         try (Connection connection = DriverManager.getConnection(url, user, password);
              PreparedStatement statement = connection.prepareStatement("INSERT INTO messages (username, message, timestamp) VALUES (?, ?, ?)")) {
             //подстановка параметров в запрос
-            statement.setString(1,  message.split(":")[0]);
-            statement.setString(2, message.split(":")[1]);
+            String username = "anonymous";
+            if (message.contains(":")) {
+                username = message.split(":")[0];
+                message = message.split(":")[1];
+            }
+            statement.setString(1,  username);
+            statement.setString(2, message);
             statement.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
             //выполнение запроса
             statement.executeUpdate();
