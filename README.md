@@ -15,6 +15,16 @@ MariaDB [chat]> select * from messages;
 ```
 Пример получаемого сообщения: `user1:test`
 Полученное сообщение рассылается всем подключенным клиентам (даже отправителю)
+## Схема БД
+Схема описана в файле /src/schema.sql
+```sql
+CREATE TABLE messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
+```
 ## Клиентская часть описана в проекте chat_client 
 https://github.com/Egor-Pavlov/chat_client
