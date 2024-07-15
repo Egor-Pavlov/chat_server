@@ -1,5 +1,13 @@
-import java.io.*;
-import java.net.*;
+package main;
+
+import configLoader.ConfigLoader;
+import model.Message;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 import java.sql.*;
 import java.util.List;
 import java.util.Set;
@@ -66,9 +74,9 @@ public class ClientHandler implements Runnable {
     }
     /**
      * Чтение сообщения, рассылка и сохранения в БД
-     * Создание и запуск потока: Каждый раз при подключении нового клиента создается новый поток, который выполняет код из метода run() в ClientHandler.
+     * Создание и запуск потока: Каждый раз при подключении нового клиента создается новый поток, который выполняет код из метода run() в main.ClientHandler.
      * Работа потока: Поток читает сообщения от клиента, рассылает их всем другим клиентам через метод broadcast() и сохраняет в базу данных через saveMessageToDB().
-     * Завершение потока: Поток завершается, когда закрывается соединение с клиентом (socket.close()), что вызывает выход из цикла while в run() методе ClientHandler.
+     * Завершение потока: Поток завершается, когда закрывается соединение с клиентом (socket.close()), что вызывает выход из цикла while в run() методе main.ClientHandler.
      */
     @Override
     public void run() {
@@ -90,11 +98,11 @@ public class ClientHandler implements Runnable {
             //Получение данных из БД и отправка пользователям
             getHistory();
 
-            String message;
-            //чтение сообщения (из сокета) и обработка
-            while ((message = in.readLine()) != null) {
-                saveMessageToDB(message);
+            String jsonMessage;
+            while ((jsonMessage = in.readLine()) != null) {
+                Message message = Message.fromJson(jsonMessage);
                 broadcast(message);
+                saveMessageToDB(message);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -113,17 +121,18 @@ public class ClientHandler implements Runnable {
      * Посылает сообщение всем подключенным клиентам
      * @param message - сообщение для рассылки
      */
-    private void broadcast(String message) {
-        String query = "SELECT * FROM messages where username='" + message.split("\\|")[0] + "' and message='" + message.split("\\|")[1] + "' ORDER BY id DESC LIMIT 1;";
+    private void broadcast(Message message) {
+        String query = "SELECT * FROM messages where username='" + message.getUsername() + "' and message='" + message.getText() + "' ORDER BY id DESC LIMIT 1;";
         String messagewithTime = "";
         try (Connection connection = DriverManager.getConnection(url, user, password);
              PreparedStatement statement = connection.prepareStatement(query);
              ResultSet resultSet = statement.executeQuery()) {
 
             while (resultSet.next()) {
-                String time = resultSet.getString("timestamp");
+                Timestamp time = Timestamp.valueOf(resultSet.getString("timestamp"));
                 String username = resultSet.getString("username");
                 String text = resultSet.getString("message");
+                Message message1 = new Message(username, text, resultSet.getString("timestamp"));
                 messagewithTime = time + "|" + username + "|" + text;
             }
             synchronized (clients) {
@@ -142,18 +151,12 @@ public class ClientHandler implements Runnable {
      * Логирование сообщения в БД
      * @param message - полученное сообщение
      */
-    private void saveMessageToDB(String message) {
+    private void saveMessageToDB(Message message) {
         try (Connection connection = DriverManager.getConnection(url, user, password);
              PreparedStatement statement = connection.prepareStatement("INSERT INTO messages (username, message, timestamp) VALUES (?, ?, ?)")) {
             //подстановка параметров в запрос
-            String username = "anonymous";
-            String text = "";
-            if (message.contains("|")) {
-                username = message.split("\\|")[0];
-                text = message.split("\\|")[1];
-            }
-            statement.setString(1,  username);
-            statement.setString(2, text);
+            statement.setString(1,  message.getUsername());
+            statement.setString(2, message.getText());
             statement.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
             //выполнение запроса
             statement.executeUpdate();

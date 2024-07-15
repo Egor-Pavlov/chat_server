@@ -1,3 +1,7 @@
+package main;
+
+import configLoader.ConfigLoader;
+
 import java.io.*;
 import java.net.*;
 import java.sql.Connection;
