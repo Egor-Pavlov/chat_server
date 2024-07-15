@@ -18,6 +18,7 @@ public class Main {
                 Socket clientSocket = serverSocket.accept();
                 //создаем обработчик на новый запрос
                 ClientHandler clientHandler = new ClientHandler(clientSocket, clients);
+
                 //добавляем в список
                 clients.add(clientHandler);
                 //запускаем обработку в отдельном потоке
