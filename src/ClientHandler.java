@@ -19,28 +19,34 @@ public class ClientHandler implements Runnable {
     private String url = "jdbc:mariadb://100.110.2.118:3306/chat";
     private String user = "javauser";
     private String password = "javapassword";
-
+    private int historySize = 10;
     public ClientHandler(Socket socket, List<ClientHandler> clients) {
         this.socket = socket;
         this.clients = clients;
     }
 
-    public String getHistory(){
+    public void getHistory(){
+
+        String query = "SELECT * FROM messages";
+        if(historySize >= 0){
+            query = "SELECT * FROM (SELECT * FROM messages ORDER BY id DESC LIMIT "+
+                    historySize + ") subquery ORDER BY id ASC;";
+        }
+
         try (Connection connection = DriverManager.getConnection(url, user, password);
-             PreparedStatement statement = connection.prepareStatement("SELECT * FROM messages");
+            PreparedStatement statement = connection.prepareStatement(query);
              ResultSet resultSet = statement.executeQuery()) {
 
             while (resultSet.next()) {
+                String time = resultSet.getString("timestamp");
                 String username = resultSet.getString("username");
                 String message = resultSet.getString("message");
-                out.println(username + ":"+ message);
-
+                out.println(time + "|" + username + "|" + message);
             }
 
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return "";
     }
     /**
      * Чтение сообщения, рассылка и сохранения в БД
@@ -55,17 +61,14 @@ public class ClientHandler implements Runnable {
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             out = new PrintWriter(socket.getOutputStream(), true);
 
-            //Получение данных из БД
+            //Получение данных из БД и отправка пользователям
             getHistory();
-            //Преобразование
-
-
 
             String message;
             //чтение сообщения (из сокета) и обработка
             while ((message = in.readLine()) != null) {
-                broadcast(message);
                 saveMessageToDB(message);
+                broadcast(message);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -83,15 +86,31 @@ public class ClientHandler implements Runnable {
      * @param message - сообщение для рассылки
      */
     private void broadcast(String message) {
-        synchronized (clients) {
-            for (ClientHandler client : clients) {
-                //пишем в сокет, который слушают клиенты
-                    client.out.println(message);
+        String query = "SELECT * FROM messages where username='" + message.split("\\|")[0] + "' and message='" + message.split("\\|")[1] + "' ORDER BY id DESC LIMIT 1;";
+        String messagewithTime = "";
+        try (Connection connection = DriverManager.getConnection(url, user, password);
+             PreparedStatement statement = connection.prepareStatement(query);
+             ResultSet resultSet = statement.executeQuery()) {
+
+            while (resultSet.next()) {
+                String time = resultSet.getString("timestamp");
+                String username = resultSet.getString("username");
+                String text = resultSet.getString("message");
+                messagewithTime = time + "|" + username + "|" + text;
             }
+            synchronized (clients) {
+                for (ClientHandler client : clients) {
+                    //пишем в сокет, который слушают клиенты
+                    client.out.println(messagewithTime);
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    /**
+        /**
      * Логирование сообщения в БД
      * @param message - полученное сообщение
      */
@@ -100,12 +119,13 @@ public class ClientHandler implements Runnable {
              PreparedStatement statement = connection.prepareStatement("INSERT INTO messages (username, message, timestamp) VALUES (?, ?, ?)")) {
             //подстановка параметров в запрос
             String username = "anonymous";
-            if (message.contains(":")) {
-                username = message.split(":")[0];
-                message = message.split(":")[1];
+            String text = "";
+            if (message.contains("|")) {
+                username = message.split("\\|")[0];
+                text = message.split("\\|")[1];
             }
             statement.setString(1,  username);
-            statement.setString(2, message);
+            statement.setString(2, text);
             statement.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
             //выполнение запроса
             statement.executeUpdate();
