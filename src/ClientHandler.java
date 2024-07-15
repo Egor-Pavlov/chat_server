@@ -8,7 +8,7 @@ import java.util.Set;
 
 /**
  * Класс-обработчик входящих сообщений.
- * Рассылает новые сообщения остальным клиентам и сохраняет в БД
+ * Рассылает сообщения клиентам и сохраняет в БД полученные сообщения
  */
 public class ClientHandler implements Runnable {
     private Socket socket;
@@ -30,6 +30,10 @@ public class ClientHandler implements Runnable {
         this.usernames = usernames;
     }
 
+    /**
+     * Отправка пользователю истории сообщений (при его подключении)
+     * если параметр класса historySize >= 0 - то это значение используется. Если оно < 0, то будут получены все сообщения.
+     */
     public void getHistory(){
 
         String query = "SELECT * FROM messages";
