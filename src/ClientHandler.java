@@ -11,6 +11,7 @@ import java.util.Set;
  * Рассылает сообщения клиентам и сохраняет в БД полученные сообщения
  */
 public class ClientHandler implements Runnable {
+    private ConfigLoader configLoader;
     private Socket socket;
     //Список всех клиентов нужен, чтобы разослать всем новое сообщение
     private List<ClientHandler> clients;
@@ -19,15 +20,21 @@ public class ClientHandler implements Runnable {
     private PrintWriter out;
     private BufferedReader in;
 
-    private String url = "jdbc:mariadb://100.110.2.118:3306/chat";
+    private String url = "jdbc:mariadb://127.0.0.1:3306/chat";
     private String user = "javauser";
     private String password = "javapassword";
     private int historySize = 10;
 
-    public ClientHandler(Socket socket, List<ClientHandler> clients, Set<String> usernames) {
+    public ClientHandler(Socket socket, List<ClientHandler> clients, Set<String> usernames, ConfigLoader configLoader) {
         this.socket = socket;
         this.clients = clients;
         this.usernames = usernames;
+        this.configLoader = configLoader;
+
+        url = configLoader.getProperty("database.url");
+        user = configLoader.getProperty("database.user");
+        password = configLoader.getProperty("database.password");
+        historySize = Integer.parseInt(configLoader.getProperty("history.size"));
     }
 
     /**

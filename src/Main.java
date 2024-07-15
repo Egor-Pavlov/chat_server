@@ -1,11 +1,12 @@
 import java.io.*;
 import java.net.*;
-import java.sql.*;
 import java.util.*;
 
 public class Main {
+    static ConfigLoader configLoader = new ConfigLoader("application.properties");
     //порт сервера
-    private static final int PORT = 12345;
+    private static final int PORT = configLoader.getIntProperty("server.port");
+    ;
     //список обработчиков событий
     private static List<ClientHandler> clients = Collections.synchronizedList(new ArrayList<>());
     private static Set<String> usernames = Collections.synchronizedSet(new HashSet<>());
@@ -18,7 +19,7 @@ public class Main {
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 //создаем обработчик на новый запрос
-                ClientHandler clientHandler = new ClientHandler(clientSocket, clients, usernames);
+                ClientHandler clientHandler = new ClientHandler(clientSocket, clients, usernames, configLoader);
 
                 //добавляем в список
                 clients.add(clientHandler);
