@@ -8,6 +8,7 @@ public class Main {
     private static final int PORT = 12345;
     //список обработчиков событий
     private static List<ClientHandler> clients = Collections.synchronizedList(new ArrayList<>());
+    private static Set<String> usernames = Collections.synchronizedSet(new HashSet<>());
 
     public static void main(String[] args) {
         //подключаем сервер к сокету
@@ -17,7 +18,7 @@ public class Main {
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 //создаем обработчик на новый запрос
-                ClientHandler clientHandler = new ClientHandler(clientSocket, clients);
+                ClientHandler clientHandler = new ClientHandler(clientSocket, clients, usernames);
 
                 //добавляем в список
                 clients.add(clientHandler);

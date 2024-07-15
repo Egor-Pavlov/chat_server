@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.*;
 import java.sql.*;
 import java.util.List;
+import java.util.Set;
 
 //Наследуемся от runnable, чтобы запускаться в Threads
 
@@ -13,6 +14,8 @@ public class ClientHandler implements Runnable {
     private Socket socket;
     //Список всех клиентов нужен, чтобы разослать всем новое сообщение
     private List<ClientHandler> clients;
+    private String Username;
+    private Set<String> usernames;
     private PrintWriter out;
     private BufferedReader in;
 
@@ -20,9 +23,11 @@ public class ClientHandler implements Runnable {
     private String user = "javauser";
     private String password = "javapassword";
     private int historySize = 10;
-    public ClientHandler(Socket socket, List<ClientHandler> clients) {
+
+    public ClientHandler(Socket socket, List<ClientHandler> clients, Set<String> usernames) {
         this.socket = socket;
         this.clients = clients;
+        this.usernames = usernames;
     }
 
     public void getHistory(){
@@ -61,6 +66,16 @@ public class ClientHandler implements Runnable {
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             out = new PrintWriter(socket.getOutputStream(), true);
 
+            Username = in.readLine();
+            // Проверка уникальности имени пользователя
+            synchronized (usernames) {
+                if (usernames.contains(Username)) {
+                    out.println("Username already taken");
+                    return;
+                }
+                usernames.add(Username);
+            }
+
             //Получение данных из БД и отправка пользователям
             getHistory();
 
@@ -74,6 +89,8 @@ public class ClientHandler implements Runnable {
             e.printStackTrace();
         } finally {
             try {
+                usernames.remove(Username);
+                clients.remove(this);
                 socket.close();
             } catch (IOException e) {
                 e.printStackTrace();
