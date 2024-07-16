@@ -172,10 +172,6 @@ public class ClientHandler implements Runnable {
      * @param message - полученное сообщение
      */
     private void saveMessageToDB(Message message) {
-        String url = "jdbc:mariadb://100.110.2.118:3306/chat";
-        String user = "javauser";
-        String password = "javapassword";
-
         try (Connection connection = DriverManager.getConnection(url, user, password);
              PreparedStatement statement = connection.prepareStatement("INSERT INTO messages (username, message, timestamp, timezone) VALUES (?, ?, ?, ?)")) {
 
