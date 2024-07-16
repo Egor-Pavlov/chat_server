@@ -9,6 +9,8 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.sql.*;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -62,10 +64,20 @@ public class ClientHandler implements Runnable {
              ResultSet resultSet = statement.executeQuery()) {
 
             while (resultSet.next()) {
-                String time = resultSet.getString("timestamp");
-                String username = resultSet.getString("username");
-                String message = resultSet.getString("message");
-                out.println(time + "|" + username + "|" + message);
+                Timestamp timestamp = resultSet.getTimestamp("timestamp");
+
+                //в столбце timestamp хранится время по серверу, в таймзоне - часовой пояс в который надо преобразовать время
+                String timezone = resultSet.getString("timezone");
+
+                ZoneId zoneId = ZoneId.of(timezone);
+                //Время преобразуется в указанный пояс и отправляется. Получатель преобразует время в свой часовой пояс и отображает
+                ZonedDateTime dateTime = ZonedDateTime.ofInstant(timestamp.toInstant(), zoneId);
+
+
+                Message messageFromDB = new Message(resultSet.getString("username"),
+                        resultSet.getString("message"), dateTime);
+
+                out.println(messageFromDB.toJson());
             }
 
         } catch (SQLException e) {
@@ -101,8 +113,8 @@ public class ClientHandler implements Runnable {
             String jsonMessage;
             while ((jsonMessage = in.readLine()) != null) {
                 Message message = Message.fromJson(jsonMessage);
-                broadcast(message);
                 saveMessageToDB(message);
+                broadcast(message);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -122,23 +134,31 @@ public class ClientHandler implements Runnable {
      * @param message - сообщение для рассылки
      */
     private void broadcast(Message message) {
-        String query = "SELECT * FROM messages where username='" + message.getUsername() + "' and message='" + message.getText() + "' ORDER BY id DESC LIMIT 1;";
-        String messagewithTime = "";
-        try (Connection connection = DriverManager.getConnection(url, user, password);
-             PreparedStatement statement = connection.prepareStatement(query);
-             ResultSet resultSet = statement.executeQuery()) {
+        String query = "SELECT * FROM messages WHERE username=? AND message=? ORDER BY id DESC LIMIT 1;";
+        Message messageFromDB = null;
 
-            while (resultSet.next()) {
-                Timestamp time = Timestamp.valueOf(resultSet.getString("timestamp"));
+        try (Connection connection = DriverManager.getConnection(url, user, password);
+             PreparedStatement statement = connection.prepareStatement(query)) {
+
+            statement.setString(1, message.getUsername());
+            statement.setString(2, message.getText());
+            ResultSet resultSet = statement.executeQuery();
+
+            if (resultSet.next()) {
                 String username = resultSet.getString("username");
                 String text = resultSet.getString("message");
-                Message message1 = new Message(username, text, resultSet.getString("timestamp"));
-                messagewithTime = time + "|" + username + "|" + text;
+                Timestamp timestamp = resultSet.getTimestamp("timestamp");
+                String timezone = resultSet.getString("timezone");
+
+                ZonedDateTime dateTime = ZonedDateTime.of(timestamp.toLocalDateTime(), ZoneId.of(timezone));
+                messageFromDB = new Message(username, text, dateTime);
             }
-            synchronized (clients) {
-                for (ClientHandler client : clients) {
-                    //пишем в сокет, который слушают клиенты
-                    client.out.println(messagewithTime);
+
+            if (messageFromDB != null) {
+                synchronized (clients) {
+                    for (ClientHandler client : clients) {
+                        client.out.println(messageFromDB.toJson());
+                    }
                 }
             }
 
@@ -147,21 +167,60 @@ public class ClientHandler implements Runnable {
         }
     }
 
-        /**
+    /**
      * Логирование сообщения в БД
      * @param message - полученное сообщение
      */
     private void saveMessageToDB(Message message) {
+        String url = "jdbc:mariadb://100.110.2.118:3306/chat";
+        String user = "javauser";
+        String password = "javapassword";
+
         try (Connection connection = DriverManager.getConnection(url, user, password);
-             PreparedStatement statement = connection.prepareStatement("INSERT INTO messages (username, message, timestamp) VALUES (?, ?, ?)")) {
-            //подстановка параметров в запрос
-            statement.setString(1,  message.getUsername());
+             PreparedStatement statement = connection.prepareStatement("INSERT INTO messages (username, message, timestamp, timezone) VALUES (?, ?, ?, ?)")) {
+
+            statement.setString(1, message.getUsername());
             statement.setString(2, message.getText());
-            statement.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
-            //выполнение запроса
+
+            // Преобразование ZonedDateTime в Timestamp
+            Timestamp timestamp = Timestamp.from(message.getTimestamp().toInstant());
+            statement.setTimestamp(3, timestamp);
+
+            // Добавление таймзоны
+            statement.setString(4, message.getTimestamp().getZone().getId());
+
             statement.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
+
+//    public List<Message> getMessagesFromDB() {
+//        List<Message> messages = new ArrayList<>();
+//        String url = "jdbc:mariadb://100.110.2.118:3306/chat";
+//        String user = "javauser";
+//        String password = "javapassword";
+//
+//        try (Connection connection = DriverManager.getConnection(url, user, password);
+//             PreparedStatement statement = connection.prepareStatement("SELECT username, message, timestamp, timezone FROM messages");
+//             ResultSet resultSet = statement.executeQuery()) {
+//
+//            while (resultSet.next()) {
+//                String username = resultSet.getString("username");
+//                String text = resultSet.getString("message");
+//                Timestamp timestamp = resultSet.getTimestamp("timestamp");
+//                String timezone = resultSet.getString("timezone");
+//
+//                // Преобразование Timestamp и таймзоны в ZonedDateTime
+//                ZoneId zoneId = ZoneId.of(timezone);
+//                ZonedDateTime dateTime = ZonedDateTime.ofInstant(timestamp.toInstant(), zoneId);
+//
+//                messages.add(new Message(username, text, dateTime));
+//            }
+//        } catch (SQLException e) {
+//            e.printStackTrace();
+//        }
+//        return messages;
+//    }
+
 }

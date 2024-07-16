@@ -1,19 +1,18 @@
 package model;
-
-import java.sql.Timestamp;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class Message {
     private String username;
     private String text;
-    private Timestamp timestamp;
+    private ZonedDateTime timestamp;
 
-    public Message(String username, String text, long timestamp) {
+    public Message(String username, String text, ZonedDateTime timestamp) {
         this.username = username;
         this.text = text;
         this.timestamp = timestamp;
     }
 
-    // Getters and setters
     public String getUsername() {
         return username;
     }
@@ -30,24 +29,25 @@ public class Message {
         this.text = text;
     }
 
-    public Timestamp getTimestamp() {
+    public ZonedDateTime getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(Timestamp timestamp) {
+    public void setTimestamp(ZonedDateTime timestamp) {
         this.timestamp = timestamp;
     }
 
-    // сериализация в json
     public String toJson() {
-        return String.format("{\"username\":\"%s\",\"text\":\"%s\",\"timestamp\":%d}", username, text, timestamp);
+        DateTimeFormatter formatter = DateTimeFormatter.ISO_ZONED_DATE_TIME;
+        return String.format("{\"username\":\"%s\",\"text\":\"%s\",\"timestamp\":\"%s\"}",
+                username, text, timestamp.format(formatter));
     }
 
-    // де сериализация из json
     public static Message fromJson(String json) {
         String username = json.split("\"username\":\"")[1].split("\"")[0];
         String text = json.split("\"text\":\"")[1].split("\"")[0];
-        long timestamp = Long.parseLong(json.split("\"timestamp\":")[1].split("}")[0]);
+        String timestampStr = json.split("\"timestamp\":\"")[1].split("\"")[0];
+        ZonedDateTime timestamp = ZonedDateTime.parse(timestampStr, DateTimeFormatter.ISO_ZONED_DATE_TIME);
         return new Message(username, text, timestamp);
     }
 }
