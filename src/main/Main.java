@@ -19,6 +19,18 @@ public class Main {
     private static List<ClientHandler> clients = Collections.synchronizedList(new ArrayList<>());
     private static Set<String> usernames = Collections.synchronizedSet(new HashSet<>());
 
+    // Метод для чтения содержимого файла
+    private static String readSQLFile(String filePath) throws IOException {
+        StringBuilder sql = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sql.append(line).append("\n");
+            }
+        }
+        return sql.toString();
+    }
+
     public static void initializeDB() {
         String url = configLoader.getProperty("database.url");
         String user = configLoader.getProperty("database.user");
@@ -27,16 +39,11 @@ public class Main {
         try (Connection connection = DriverManager.getConnection(url, user, password);
              Statement statement = connection.createStatement()) {
 
-            String createTableSQL = "CREATE TABLE IF NOT EXISTS messages ("
-                    + "id INT AUTO_INCREMENT PRIMARY KEY, "
-                    + "username VARCHAR(255) NOT NULL, "
-                    + "message TEXT NOT NULL, "
-                    + "timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
-                    + ")";
+            String createTableSQL = readSQLFile("./src/schema.sql");
             statement.execute(createTableSQL);
             System.out.println("Table 'messages' created or already exists.");
 
-        } catch (SQLException e) {
+        } catch (SQLException | IOException e) {
             e.printStackTrace();
         }
     }

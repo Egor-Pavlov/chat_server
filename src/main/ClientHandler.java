@@ -194,33 +194,4 @@ public class ClientHandler implements Runnable {
             e.printStackTrace();
         }
     }
-
-//    public List<Message> getMessagesFromDB() {
-//        List<Message> messages = new ArrayList<>();
-//        String url = "jdbc:mariadb://100.110.2.118:3306/chat";
-//        String user = "javauser";
-//        String password = "javapassword";
-//
-//        try (Connection connection = DriverManager.getConnection(url, user, password);
-//             PreparedStatement statement = connection.prepareStatement("SELECT username, message, timestamp, timezone FROM messages");
-//             ResultSet resultSet = statement.executeQuery()) {
-//
-//            while (resultSet.next()) {
-//                String username = resultSet.getString("username");
-//                String text = resultSet.getString("message");
-//                Timestamp timestamp = resultSet.getTimestamp("timestamp");
-//                String timezone = resultSet.getString("timezone");
-//
-//                // Преобразование Timestamp и таймзоны в ZonedDateTime
-//                ZoneId zoneId = ZoneId.of(timezone);
-//                ZonedDateTime dateTime = ZonedDateTime.ofInstant(timestamp.toInstant(), zoneId);
-//
-//                messages.add(new Message(username, text, dateTime));
-//            }
-//        } catch (SQLException e) {
-//            e.printStackTrace();
-//        }
-//        return messages;
-//    }
-
 }
