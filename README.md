@@ -13,9 +13,53 @@
 * В качестве СУБД используется MariaDB.
 * Предусмотрен запуск в докер-контейнере.
 
+
+<details>
+  <summary>Структура проекта</summary>
+
+```bash
+.
+├── chat_SE.iml
+├── Dockerfile
+├── mariadb-java-client-3.4.0.jar
+├── out
+│   ├── artifacts
+│   │   └── chat_SE_jar
+│   │       └── chat_SE.jar
+│   └── production
+│       └── chat_SE
+│           ├── application.properties
+│           ├── configLoader
+│           │   └── ConfigLoader.class
+│           ├── main
+│           │   ├── ClientHandler.class
+│           │   └── Main.class
+│           ├── META-INF
+│           │   └── MANIFEST.MF
+│           ├── model
+│           │   └── Message.class
+│           └── schema.sql
+├── README.md
+├── resources
+│   ├── application.properties
+│   ├── META-INF
+│   │   └── MANIFEST.MF
+│   └── schema.sql
+└── src
+    ├── configLoader
+    │   └── ConfigLoader.java
+    ├── main
+    │   ├── ClientHandler.java
+    │   └── Main.java
+    └── model
+        └── Message.java
+```
+</details>
+
+
 <a name="build"><h2>Сборка и запуск</h2></a>
 1. Собрать проект в jar средствами ide (_build_ -> _build artifacts_) 
-2. Выполнить сборку образа docker
+2. Выполнить сборку образа docker (команду выполнять в корне проекта)
    ```bash
     docker build -t chat-server .
    ```
