@@ -17,6 +17,12 @@
   <summary>Структура проекта</summary>
 
 ```bash
+├── lib
+│   ├── apache-log4j-2.23.1-bin.zip
+│   ├── log4j-api-2.23.1.jar
+│   ├── log4j-core-2.23.1.jar
+│   ├── log4j-docker-2.23.1.jar
+│   └── mariadb-java-client-3.4.0.jar
 ├── out
 │   ├── artifacts
 │   │   └── chat_SE_jar
@@ -33,11 +39,13 @@
 │           ├── model
 │           │   └── Message.class
 │           ├── application.properties
+│           ├── log4j2.xml
 │           └── schema.sql
 ├── resources
 │   ├── META-INF
 │   │   └── MANIFEST.MF
 │   ├── application.properties
+│   ├── log4j2.xml
 │   └── schema.sql
 ├── src
 │   ├── configLoader
@@ -49,9 +57,7 @@
 │       └── Message.java
 ├── chat_SE.iml
 ├── Dockerfile
-├── mariadb-java-client-3.4.0.jar
 └── README.md
-
 ```
 </details>
 
