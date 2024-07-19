@@ -1,6 +1,8 @@
 package main;
 
 import configLoader.ConfigLoader;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,6 +18,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class Main {
+    private static final Logger logger = LogManager.getLogger(Main.class);
     static ConfigLoader configLoader = new ConfigLoader("application.properties");
     //порт сервера
     private static final int PORT = configLoader.getIntProperty("server.port");
@@ -59,8 +62,8 @@ public class Main {
         initializeDB();
         //подключаем сервер к сокету
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-            System.out.println("Server started on port " + PORT);
-
+//            System.out.println("Server started on port " + PORT);
+            logger.info("Server started on port " + PORT);
             //слушаем сокет
             while (true) {
                 Socket clientSocket = serverSocket.accept();
