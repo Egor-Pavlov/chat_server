@@ -96,6 +96,6 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 ```
 
-<a name="clients"><h1>Клиентская часть описана в проекте chat_client</h1></a>
+<a name="client"><h1>Клиентская часть описана в проекте chat_client</h1></a>
 
 https://github.com/Egor-Pavlov/chat_client
