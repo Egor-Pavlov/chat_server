@@ -13,22 +13,16 @@
 * В качестве СУБД используется MariaDB.
 * Предусмотрен запуск в докер-контейнере.
 
-
 <details>
   <summary>Структура проекта</summary>
 
 ```bash
-.
-├── chat_SE.iml
-├── Dockerfile
-├── mariadb-java-client-3.4.0.jar
 ├── out
 │   ├── artifacts
 │   │   └── chat_SE_jar
 │   │       └── chat_SE.jar
 │   └── production
 │       └── chat_SE
-│           ├── application.properties
 │           ├── configLoader
 │           │   └── ConfigLoader.class
 │           ├── main
@@ -38,21 +32,26 @@
 │           │   └── MANIFEST.MF
 │           ├── model
 │           │   └── Message.class
+│           ├── application.properties
 │           └── schema.sql
-├── README.md
 ├── resources
-│   ├── application.properties
 │   ├── META-INF
 │   │   └── MANIFEST.MF
+│   ├── application.properties
 │   └── schema.sql
-└── src
-    ├── configLoader
-    │   └── ConfigLoader.java
-    ├── main
-    │   ├── ClientHandler.java
-    │   └── Main.java
-    └── model
-        └── Message.java
+├── src
+│   ├── configLoader
+│   │   └── ConfigLoader.java
+│   ├── main
+│   │   ├── ClientHandler.java
+│   │   └── Main.java
+│   └── model
+│       └── Message.java
+├── chat_SE.iml
+├── Dockerfile
+├── mariadb-java-client-3.4.0.jar
+└── README.md
+
 ```
 </details>
 
