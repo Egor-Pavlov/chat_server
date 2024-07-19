@@ -21,10 +21,18 @@ public class ConfigLoader {
     }
 
     public String getProperty(String key) {
-        return properties.getProperty(key);
+        String value = System.getenv(key);
+        if (value == null) {
+            value = properties.getProperty(key);
+        }
+        return value;
     }
 
     public int getIntProperty(String key) {
-        return Integer.parseInt(properties.getProperty(key));
+        String value = System.getenv(key);
+        if (value == null) {
+            value = properties.getProperty(key);
+        }
+        return Integer.parseInt(value);
     }
 }

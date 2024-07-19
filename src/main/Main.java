@@ -2,13 +2,18 @@ package main;
 
 import configLoader.ConfigLoader;
 
-import java.io.*;
-import java.net.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Main {
     static ConfigLoader configLoader = new ConfigLoader("application.properties");
@@ -20,15 +25,17 @@ public class Main {
     private static Set<String> usernames = Collections.synchronizedSet(new HashSet<>());
 
     // Метод для чтения содержимого файла
-    private static String readSQLFile(String filePath) throws IOException {
-        StringBuilder sql = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sql.append(line).append("\n");
-            }
+    public static String readSQLFile(String filePath) {
+        InputStream inputStream = Main.class.getClassLoader().getResourceAsStream(filePath);
+        if (inputStream == null) {
+            throw new IllegalArgumentException("File not found! " + filePath);
         }
-        return sql.toString();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+            return reader.lines().collect(Collectors.joining("\n"));
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     public static void initializeDB() {
@@ -39,11 +46,11 @@ public class Main {
         try (Connection connection = DriverManager.getConnection(url, user, password);
              Statement statement = connection.createStatement()) {
 
-            String createTableSQL = readSQLFile("./src/schema.sql");
+            String createTableSQL = readSQLFile("schema.sql");
             statement.execute(createTableSQL);
             System.out.println("Table 'messages' created or already exists.");
 
-        } catch (SQLException | IOException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }
@@ -53,6 +60,7 @@ public class Main {
         //подключаем сервер к сокету
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             System.out.println("Server started on port " + PORT);
+
             //слушаем сокет
             while (true) {
                 Socket clientSocket = serverSocket.accept();
