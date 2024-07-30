@@ -87,7 +87,7 @@
   ```
 4. Запустить контейнер  
    ```bash
-   docker sudo docker compose up -d
+   sudo docker compose up -d
    ```
 
 Для запуска приложения через IDE нужно отредактировать конфигурационный файл application.properties в /resources и запустить файл `configLoader.java`
