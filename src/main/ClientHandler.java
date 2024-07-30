@@ -2,6 +2,8 @@ package main;
 
 import configLoader.ConfigLoader;
 import model.Message;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -21,6 +23,7 @@ import java.util.Set;
  * Рассылает сообщения клиентам и сохраняет в БД полученные сообщения
  */
 public class ClientHandler implements Runnable {
+    private static final Logger logger = LogManager.getLogger(Main.class);
     private ConfigLoader configLoader;
     private Socket socket;
     //Список всех клиентов нужен, чтобы разослать всем новое сообщение
@@ -36,6 +39,7 @@ public class ClientHandler implements Runnable {
     private int historySize = 10;
 
     public ClientHandler(Socket socket, List<ClientHandler> clients, Set<String> usernames, ConfigLoader configLoader) {
+        logger.info("Initializing Client Handler");
         this.socket = socket;
         this.clients = clients;
         this.usernames = usernames;
@@ -45,6 +49,11 @@ public class ClientHandler implements Runnable {
         user = configLoader.getProperty("database.user");
         password = configLoader.getProperty("database.password");
         historySize = Integer.parseInt(configLoader.getProperty("history.size"));
+
+        logger.debug("database url: " + url);
+        logger.debug("database user: " + user);
+        logger.debug("database password: " + password);
+        logger.debug("database history size: " + historySize);
     }
 
     /**
@@ -52,17 +61,16 @@ public class ClientHandler implements Runnable {
      * если параметр класса historySize >= 0 - то это значение используется. Если оно < 0, то будут получены все сообщения.
      */
     public void getHistory(){
-
+        logger.debug("Getting history");
         String query = "SELECT * FROM messages";
         if(historySize >= 0){
             query = "SELECT * FROM (SELECT * FROM messages ORDER BY id DESC LIMIT "+
                     historySize + ") subquery ORDER BY id ASC;";
         }
-
+        logger.debug("query: " + query);
         try (Connection connection = DriverManager.getConnection(url, user, password);
             PreparedStatement statement = connection.prepareStatement(query);
              ResultSet resultSet = statement.executeQuery()) {
-
             while (resultSet.next()) {
                 Timestamp timestamp = resultSet.getTimestamp("timestamp");
 
@@ -93,18 +101,22 @@ public class ClientHandler implements Runnable {
     @Override
     public void run() {
         try {
+            logger.info("Starting Client Handler");
             //установка сокета как потоков ввода и вывода
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             out = new PrintWriter(socket.getOutputStream(), true);
 
             Username = in.readLine();
+            logger.debug("Username: " + Username);
             // Проверка уникальности имени пользователя
             synchronized (usernames) {
                 if (usernames.contains(Username)) {
                     out.println("Username already taken");
+                    logger.debug("Username: " + Username + " already taken, reject sent");
                     return;
                 }
                 usernames.add(Username);
+                logger.debug("User \"" + Username + "\" added to chat");
             }
 
             //Получение данных из БД и отправка пользователям
@@ -113,6 +125,7 @@ public class ClientHandler implements Runnable {
             String jsonMessage;
             while ((jsonMessage = in.readLine()) != null) {
                 Message message = Message.fromJson(jsonMessage);
+                logger.debug("New incoming message. Message: " + message.toJson());
                 saveMessageToDB(message);
                 broadcast(message);
             }
@@ -120,6 +133,7 @@ public class ClientHandler implements Runnable {
             e.printStackTrace();
         } finally {
             try {
+                logger.info("Closing client handler due to client disconnect");
                 usernames.remove(Username);
                 clients.remove(this);
                 socket.close();
@@ -134,6 +148,7 @@ public class ClientHandler implements Runnable {
      * @param message - сообщение для рассылки
      */
     private void broadcast(Message message) {
+        logger.debug("Start broadcast send new message: " + message.toJson());
         String query = "SELECT * FROM messages WHERE username=? AND message=? ORDER BY id DESC LIMIT 1;";
         Message messageFromDB = null;
 
@@ -142,6 +157,7 @@ public class ClientHandler implements Runnable {
 
             statement.setString(1, message.getUsername());
             statement.setString(2, message.getText());
+            logger.debug("Query: " + statement);
             ResultSet resultSet = statement.executeQuery();
 
             if (resultSet.next()) {
@@ -152,9 +168,11 @@ public class ClientHandler implements Runnable {
 
                 ZonedDateTime dateTime = ZonedDateTime.of(timestamp.toLocalDateTime(), ZoneId.of(timezone));
                 messageFromDB = new Message(username, text, dateTime);
+                logger.debug("Message from DB: " + messageFromDB.toJson());
             }
 
             if (messageFromDB != null) {
+                logger.debug("Sending to clients");
                 synchronized (clients) {
                     for (ClientHandler client : clients) {
                         client.out.println(messageFromDB.toJson());
@@ -172,6 +190,7 @@ public class ClientHandler implements Runnable {
      * @param message - полученное сообщение
      */
     private void saveMessageToDB(Message message) {
+        logger.debug("Saving new message to DB. Message: " + message.toJson());
         try (Connection connection = DriverManager.getConnection(url, user, password);
              PreparedStatement statement = connection.prepareStatement("INSERT INTO messages (username, message, timestamp, timezone) VALUES (?, ?, ?, ?)")) {
 
@@ -184,7 +203,7 @@ public class ClientHandler implements Runnable {
 
             // Добавление таймзоны
             statement.setString(4, message.getTimestamp().getZone().getId());
-
+            logger.debug("query:" + statement);
             statement.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();

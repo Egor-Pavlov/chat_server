@@ -29,6 +29,7 @@ public class Main {
 
     // Метод для чтения содержимого файла
     public static String readSQLFile(String filePath) {
+        logger.debug("Reading SQL file: " + filePath);
         InputStream inputStream = Main.class.getClassLoader().getResourceAsStream(filePath);
         if (inputStream == null) {
             throw new IllegalArgumentException("File not found! " + filePath);
@@ -42,20 +43,27 @@ public class Main {
     }
 
     public static void initializeDB() {
+        logger.info("Initializing database...");
         String url = configLoader.getProperty("database.url");
         String user = configLoader.getProperty("database.user");
         String password = configLoader.getProperty("database.password");
 
+        logger.debug("database url: " + url);
+        logger.debug("database user: " + user);
+        logger.debug("database password: " + password);
+
+        logger.info("Connecting to database...");
         try (Connection connection = DriverManager.getConnection(url, user, password);
              Statement statement = connection.createStatement()) {
 
             String createTableSQL = readSQLFile("schema.sql");
             statement.execute(createTableSQL);
-            System.out.println("Table 'messages' created or already exists.");
+            logger.info("Table 'messages' created or already exists.");
 
         } catch (SQLException e) {
             e.printStackTrace();
         }
+        logger.info("Database initialized and connected.");
     }
 
     public static void main(String[] args) {
@@ -65,11 +73,13 @@ public class Main {
 //            System.out.println("Server started on port " + PORT);
             logger.info("Server started on port " + PORT);
             //слушаем сокет
+            logger.info("Waiting for connection...");
             while (true) {
                 Socket clientSocket = serverSocket.accept();
+                logger.info("Start new client connection...");
                 //создаем обработчик на новый запрос
                 ClientHandler clientHandler = new ClientHandler(clientSocket, clients, usernames, configLoader);
-
+                logger.info("New client connected.");
                 //добавляем в список
                 clients.add(clientHandler);
                 //запускаем обработку в отдельном потоке

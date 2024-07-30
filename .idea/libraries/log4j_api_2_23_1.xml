@@ -2,6 +2,7 @@
   <library name="log4j-api-2.23.1">
     <CLASSES>
       <root url="jar://$PROJECT_DIR$/resources/apache-log4j-2.23.1-bin/log4j-api-2.23.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/mysql-connector-j-9.0.0.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />
