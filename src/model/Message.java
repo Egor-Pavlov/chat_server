@@ -17,30 +17,18 @@ public class Message {
         return username;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
     public String getText() {
         return text;
-    }
-
-    public void setText(String text) {
-        this.text = text;
     }
 
     public ZonedDateTime getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(ZonedDateTime timestamp) {
-        this.timestamp = timestamp;
-    }
-
     public String toJson() {
-        DateTimeFormatter formatter = DateTimeFormatter.ISO_ZONED_DATE_TIME;
+        //DateTimeFormatter formatter = DateTimeFormatter.ISO_ZONED_DATE_TIME; .format(formatter)
         return String.format("{\"username\":\"%s\",\"text\":\"%s\",\"timestamp\":\"%s\"}",
-                username, text, timestamp.format(formatter));
+                username, text, timestamp);
     }
 
     public static Message fromJson(String json) {
