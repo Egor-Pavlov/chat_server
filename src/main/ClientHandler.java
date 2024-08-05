@@ -4,15 +4,19 @@ import configLoader.ConfigLoader;
 import model.Message;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import repository.DatabaseUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.net.SocketException;
 import java.sql.*;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -24,74 +28,41 @@ import java.util.Set;
  */
 public class ClientHandler implements Runnable {
     private static final Logger logger = LogManager.getLogger(Main.class);
-    private ConfigLoader configLoader;
+    DatabaseUtils databaseUtils;
     private Socket socket;
     //Список всех клиентов нужен, чтобы разослать всем новое сообщение
     private List<ClientHandler> clients;
     private String Username;
     private Set<String> usernames;
-    private PrintWriter out;
-    private BufferedReader in;
+    PrintWriter out;
+    BufferedReader in;
 
-    private String url = "jdbc:mariadb://127.0.0.1:3306/chat";
-    private String user = "javauser";
-    private String password = "javapassword";
-    private int historySize = 10;
 
-    public ClientHandler(Socket socket, List<ClientHandler> clients, Set<String> usernames, ConfigLoader configLoader) {
+    public ClientHandler(Socket socket, List<ClientHandler> clients, Set<String> usernames, ConfigLoader configLoader, DatabaseUtils databaseUtils) {
         logger.info("Initializing Client Handler");
         this.socket = socket;
         this.clients = clients;
         this.usernames = usernames;
-        this.configLoader = configLoader;
-
-        url = configLoader.getProperty("database.url");
-        user = configLoader.getProperty("database.user");
-        password = configLoader.getProperty("database.password");
-        historySize = Integer.parseInt(configLoader.getProperty("history.size"));
-
-        logger.debug("database url: " + url);
-        logger.debug("database user: " + user);
-        logger.debug("database password: " + password);
-        logger.debug("database history size: " + historySize);
+        this.databaseUtils = databaseUtils;
     }
 
     /**
      * Отправка пользователю истории сообщений (при его подключении)
      * если параметр класса historySize >= 0 - то это значение используется. Если оно < 0, то будут получены все сообщения.
      */
-    public void getHistory(){
+    public List<String> getHistory() throws SQLException {
+        List<Message> history = new ArrayList<>();
         logger.debug("Getting history");
-        String query = "SELECT * FROM messages";
-        if(historySize >= 0){
-            query = "SELECT * FROM (SELECT * FROM messages ORDER BY id DESC LIMIT "+
-                    historySize + ") subquery ORDER BY id ASC;";
-        }
-        logger.debug("query: " + query);
-        try (Connection connection = DriverManager.getConnection(url, user, password);
-            PreparedStatement statement = connection.prepareStatement(query);
-             ResultSet resultSet = statement.executeQuery()) {
-            while (resultSet.next()) {
-                Timestamp timestamp = resultSet.getTimestamp("timestamp");
-
-                //в столбце timestamp хранится время по серверу, в таймзоне - часовой пояс в который надо преобразовать время
-                String timezone = resultSet.getString("timezone");
-
-                ZoneId zoneId = ZoneId.of(timezone);
-                //Время преобразуется в указанный пояс и отправляется. Получатель преобразует время в свой часовой пояс и отображает
-                ZonedDateTime dateTime = ZonedDateTime.ofInstant(timestamp.toInstant(), zoneId);
-
-
-                Message messageFromDB = new Message(resultSet.getString("username"),
-                        resultSet.getString("message"), dateTime);
-
-                out.println(messageFromDB.toJson());
-            }
+        try {
+            history = databaseUtils.getHistory();
+            return history.stream().map(Message::toJson).toList();
 
         } catch (SQLException e) {
             e.printStackTrace();
         }
+        return List.of();
     }
+
     /**
      * Чтение сообщения, рассылка и сохранения в БД
      * Создание и запуск потока: Каждый раз при подключении нового клиента создается новый поток, который выполняет код из метода run() в main.ClientHandler.
@@ -120,7 +91,9 @@ public class ClientHandler implements Runnable {
             }
 
             //Получение данных из БД и отправка пользователям
-            getHistory();
+            for (String message : getHistory()){
+                out.println(message);
+            }
 
             String jsonMessage;
             while ((jsonMessage = in.readLine()) != null) {
@@ -129,8 +102,13 @@ public class ClientHandler implements Runnable {
                 saveMessageToDB(message);
                 broadcast(message);
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException | SQLException e) {
+            if (e.getMessage().equals("Connection reset")) {
+                logger.debug("Client connection closed");
+            }
+            else {
+                e.printStackTrace();
+            }
         } finally {
             try {
                 logger.info("Closing client handler due to client disconnect");
@@ -150,27 +128,9 @@ public class ClientHandler implements Runnable {
     private void broadcast(Message message) {
         logger.debug("Start broadcast send new message: " + message.toJson());
         String query = "SELECT * FROM messages WHERE username=? AND message=? ORDER BY id DESC LIMIT 1;";
-        Message messageFromDB = null;
-
-        try (Connection connection = DriverManager.getConnection(url, user, password);
-             PreparedStatement statement = connection.prepareStatement(query)) {
-
-            statement.setString(1, message.getUsername());
-            statement.setString(2, message.getText());
-            logger.debug("Query: " + statement);
-            ResultSet resultSet = statement.executeQuery();
-
-            if (resultSet.next()) {
-                String username = resultSet.getString("username");
-                String text = resultSet.getString("message");
-                Timestamp timestamp = resultSet.getTimestamp("timestamp");
-                String timezone = resultSet.getString("timezone");
-
-                ZonedDateTime dateTime = ZonedDateTime.of(timestamp.toLocalDateTime(), ZoneId.of(timezone));
-                messageFromDB = new Message(username, text, dateTime);
-                logger.debug("Message from DB: " + messageFromDB.toJson());
-            }
-
+        try {
+            Message messageFromDB = databaseUtils.getLastMessage(message.getUsername(), message.getText());
+            logger.debug("Message from DB: " + messageFromDB.toJson());
             if (messageFromDB != null) {
                 logger.debug("Sending to clients");
                 synchronized (clients) {
@@ -179,9 +139,9 @@ public class ClientHandler implements Runnable {
                     }
                 }
             }
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 
@@ -191,20 +151,8 @@ public class ClientHandler implements Runnable {
      */
     private void saveMessageToDB(Message message) {
         logger.debug("Saving new message to DB. Message: " + message.toJson());
-        try (Connection connection = DriverManager.getConnection(url, user, password);
-             PreparedStatement statement = connection.prepareStatement("INSERT INTO messages (username, message, timestamp, timezone) VALUES (?, ?, ?, ?)")) {
-
-            statement.setString(1, message.getUsername());
-            statement.setString(2, message.getText());
-
-            // Преобразование ZonedDateTime в Timestamp
-            Timestamp timestamp = Timestamp.from(message.getTimestamp().toInstant());
-            statement.setTimestamp(3, timestamp);
-
-            // Добавление таймзоны
-            statement.setString(4, message.getTimestamp().getZone().getId());
-            logger.debug("query:" + statement);
-            statement.executeUpdate();
+        try{
+            databaseUtils.saveMessage(message);
         } catch (SQLException e) {
             e.printStackTrace();
         }

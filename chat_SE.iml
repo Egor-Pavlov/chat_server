@@ -20,5 +20,7 @@
       </library>
     </orderEntry>
     <orderEntry type="library" name="junit.jupiter" level="project" />
+    <orderEntry type="library" name="mockito-junit-jupiter-5.0.0" level="project" />
+    <orderEntry type="library" name="mockito-junit-jupiter-5.0.01" level="project" />
   </component>
 </module>
