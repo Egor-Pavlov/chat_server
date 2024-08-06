@@ -127,7 +127,6 @@ public class ClientHandler implements Runnable {
      */
     private void broadcast(Message message) {
         logger.debug("Start broadcast send new message: " + message.toJson());
-        String query = "SELECT * FROM messages WHERE username=? AND message=? ORDER BY id DESC LIMIT 1;";
         try {
             Message messageFromDB = databaseUtils.getLastMessage(message.getUsername(), message.getText());
             logger.debug("Message from DB: " + messageFromDB.toJson());
@@ -149,10 +148,12 @@ public class ClientHandler implements Runnable {
      * Логирование сообщения в БД
      * @param message - полученное сообщение
      */
-    private void saveMessageToDB(Message message) {
+    public void saveMessageToDB(Message message) {
         logger.debug("Saving new message to DB. Message: " + message.toJson());
         try{
-            databaseUtils.saveMessage(message);
+            if (databaseUtils.saveMessage(message)) {
+                logger.debug("Message saved to database");
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }

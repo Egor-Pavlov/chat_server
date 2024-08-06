@@ -110,4 +110,14 @@ public class ClientHandlerTest {
         //Сравниваем результат
         assertEquals(expectedHistory, actualHistory);
     }
+    @ParameterizedTest
+    @CsvSource("tester123, message 123, 2024-08-08T17:00:00Z")
+    public void testSaveToDB(String testUsername, String testText, ZonedDateTime testDate) throws SQLException {
+        Message message = new Message(testUsername, testText, testDate);
+        when(databaseUtils.saveMessage(message)).thenReturn(true);
+
+        clientHandler.saveMessageToDB(message);
+
+        verify(databaseUtils, times(1)).saveMessage(message);
+    }
 }

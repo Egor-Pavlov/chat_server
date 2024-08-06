@@ -94,7 +94,7 @@ public class DatabaseUtils {
         return message;
     }
 
-    public void saveMessage(Message message) throws SQLException {
+    public boolean saveMessage(Message message) throws SQLException {
         try (Connection connection = DriverManager.getConnection(url, user, password);
              PreparedStatement statement = connection.prepareStatement("INSERT INTO messages (username, message, timestamp, timezone) VALUES (?, ?, ?, ?)")) {
 
@@ -109,6 +109,7 @@ public class DatabaseUtils {
             statement.setString(4, message.getTimestamp().getZone().getId());
             logger.debug("query:" + statement);
             statement.executeUpdate();
+            return true;
         }
     }
 
