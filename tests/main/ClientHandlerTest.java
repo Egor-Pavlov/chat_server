@@ -158,6 +158,7 @@ public class ClientHandlerTest {
             verify(client.out, times(1)).println(message.toJson());
         }
     }
+
     @ParameterizedTest
     @CsvSource("Antonio Banderos")
     public void testDisconnect(String username) {
