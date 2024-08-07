@@ -11,10 +11,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 import repository.DatabaseUtils;
 
-import java.io.BufferedReader;
-import java.io.PrintWriter;
-import java.io.StringReader;
-import java.io.StringWriter;
+import java.io.*;
 import java.net.Socket;
 import java.sql.SQLException;
 import java.time.ZonedDateTime;
@@ -177,5 +174,22 @@ public class ClientHandlerTest {
 
         verify(usernames.remove(username), times(1));
         verify(clients.remove(clientHandler), times(1));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"Tester, Tester, false",
+                "Tester, Tester123, true"})
+    public void testRegisterUser(String existedUsername, String newUsername, boolean expectedResult) throws IOException {
+        //Заглушка потока вывода
+        PrintWriter out = mock(PrintWriter.class);
+        when(socket.getOutputStream()).thenReturn(mock(java.io.OutputStream.class));
+        //добавление существующего имени пользователя
+        usernames = new HashSet<>();
+        usernames.add(existedUsername);
+        //создание нового обработчика
+        ClientHandler clientHandler = new ClientHandler(socket, clients, usernames, configLoader, databaseUtils);
+        clientHandler.out = out;
+        //Проверка регистрации с указанным именем пользователя
+        assertEquals(expectedResult, clientHandler.registerUser(newUsername));
     }
 }

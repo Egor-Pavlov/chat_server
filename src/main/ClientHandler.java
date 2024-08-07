@@ -4,6 +4,7 @@ import configLoader.ConfigLoader;
 import model.Message;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.junit.platform.engine.support.hierarchical.ThrowableCollector;
 import repository.DatabaseUtils;
 
 import java.io.BufferedReader;
@@ -78,26 +79,18 @@ public class ClientHandler implements Runnable {
             out = new PrintWriter(socket.getOutputStream(), true);
 
             Username = in.readLine();
-            logger.debug("Username: " + Username);
-            // Проверка уникальности имени пользователя
-            synchronized (usernames) {
-                if (usernames.contains(Username)) {
-                    out.println("Username already taken");
-                    logger.debug("Username: " + Username + " already taken, reject sent");
-                    return;
+            logger.debug("Username: " + Username + " want to connect");
+            //Регистрация подключения пользователя (проверка, что имя не занято)
+            if(registerUser(Username)) {
+                //Получение данных из БД и отправка пользователю после регистрации
+                for (String message : getHistory()) {
+                    out.println(message);
                 }
-                usernames.add(Username);
-                logger.debug("User \"" + Username + "\" added to chat");
-            }
-
-            //Получение данных из БД и отправка пользователям
-            for (String message : getHistory()){
-                out.println(message);
-            }
-
-            String jsonMessage;
-            while ((jsonMessage = in.readLine()) != null) {
-                handleMessage(Message.fromJson(jsonMessage));
+                //получение нового сообщения и обработка
+                String jsonMessage;
+                while ((jsonMessage = in.readLine()) != null) {
+                    handleMessage(Message.fromJson(jsonMessage));
+                }
             }
         } catch (IOException | SQLException e) {
             if (e.getMessage().equals("Connection reset")) {
@@ -110,7 +103,20 @@ public class ClientHandler implements Runnable {
             disconnect();
         }
     }
-    public void disconnect(){
+    Boolean registerUser(String username){
+        // Проверка уникальности имени пользователя
+        synchronized (usernames) {
+            if (usernames.contains(username)) {
+                out.println("Username already taken");
+                logger.debug("Username: " + username + " already taken, reject sent");
+                return false;
+            }
+            usernames.add(username);
+            logger.debug("User \"" + username + "\" added to chat");
+            return true;
+        }
+    }
+    void disconnect(){
         try {
             logger.info("Closing client handler due to client disconnect");
             usernames.remove(Username);
