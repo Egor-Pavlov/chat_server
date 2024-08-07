@@ -97,10 +97,7 @@ public class ClientHandler implements Runnable {
 
             String jsonMessage;
             while ((jsonMessage = in.readLine()) != null) {
-                Message message = Message.fromJson(jsonMessage);
-                logger.debug("New incoming message. Message: " + message.toJson());
-                saveMessageToDB(message);
-                broadcast(message);
+                handleMessage(Message.fromJson(jsonMessage));
             }
         } catch (IOException | SQLException e) {
             if (e.getMessage().equals("Connection reset")) {
@@ -121,11 +118,17 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    void handleMessage(Message message){
+        logger.debug("New incoming message. Message: " + message.toJson());
+        saveMessageToDB(message);
+        broadcast(message);
+    }
+
     /**
      * Посылает сообщение всем подключенным клиентам
      * @param message - сообщение для рассылки
      */
-    private void broadcast(Message message) {
+    void broadcast(Message message) {
         logger.debug("Start broadcast send new message: " + message.toJson());
         try {
             Message messageFromDB = databaseUtils.getLastMessage(message.getUsername(), message.getText());
