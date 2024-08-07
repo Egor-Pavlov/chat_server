@@ -107,17 +107,19 @@ public class ClientHandler implements Runnable {
                 e.printStackTrace();
             }
         } finally {
-            try {
-                logger.info("Closing client handler due to client disconnect");
-                usernames.remove(Username);
-                clients.remove(this);
-                socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            disconnect();
         }
     }
-
+    public void disconnect(){
+        try {
+            logger.info("Closing client handler due to client disconnect");
+            usernames.remove(Username);
+            clients.remove(this);
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
     void handleMessage(Message message){
         logger.debug("New incoming message. Message: " + message.toJson());
         saveMessageToDB(message);

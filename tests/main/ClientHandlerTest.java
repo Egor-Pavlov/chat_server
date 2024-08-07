@@ -18,16 +18,14 @@ import java.io.StringWriter;
 import java.net.Socket;
 import java.sql.SQLException;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -159,5 +157,24 @@ public class ClientHandlerTest {
         for (ClientHandler client : clients) {
             verify(client.out, times(1)).println(message.toJson());
         }
+    }
+    @ParameterizedTest
+    @CsvSource("Antonio Banderos")
+    public void testDisconnect(String username) {
+        clients = new ArrayList<>();
+        usernames = new HashSet<>();
+        //создаем обработчик клиента
+        ClientHandler clientHandler = new ClientHandler(socket, clients, usernames, configLoader, databaseUtils);
+        //добавляем в список обработчиков и имен пользователей
+        clients.add(clientHandler);
+        usernames.add(username);
+        //вызываем метод отключения
+        clientHandler.disconnect();
+        //Проверяем
+        assertTrue(clients.isEmpty());
+        assertTrue(usernames.isEmpty());
+
+        verify(usernames.remove(username), times(1));
+        verify(clients.remove(clientHandler), times(1));
     }
 }
