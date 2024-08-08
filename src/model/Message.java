@@ -4,27 +4,11 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
-public class Message {
-    private String username;
-    private String text;
-    private ZonedDateTime timestamp;
-
+public record Message(String username, String text, ZonedDateTime timestamp) {
     public Message(String username, String text, ZonedDateTime timestamp) {
         this.username = Objects.requireNonNull(username, "Username cannot be null");
         this.text = Objects.requireNonNull(text, "Text cannot be null");
         this.timestamp = Objects.requireNonNull(timestamp, "Timestamp cannot be null");
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public String getText() {
-        return text;
-    }
-
-    public ZonedDateTime getTimestamp() {
-        return timestamp;
     }
 
     public String toJson() {

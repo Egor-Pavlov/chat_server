@@ -15,7 +15,6 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MessageTest {
-    private static final Logger log = LogManager.getLogger(MessageTest.class);
     static ZonedDateTime timestamp;
     static Message testMessage;
     static String testUsername = "Antonio Banderos";
@@ -48,22 +47,18 @@ class MessageTest {
         System.out.println(json);
         if (isValid) {
             Message newTestMessage = Message.fromJson(json);
-            assertEquals(testUsername, newTestMessage.getUsername());
-            assertEquals(testMessageText, newTestMessage.getText());
-            assertEquals(ZonedDateTime.parse(testDate), newTestMessage.getTimestamp());
+            assertEquals(testUsername, newTestMessage.username());
+            assertEquals(testMessageText, newTestMessage.text());
+            assertEquals(ZonedDateTime.parse(testDate), newTestMessage.timestamp());
         } else {
-            assertThrows(IllegalArgumentException.class, () -> {
-                Message.fromJson(json);
-            });
+            assertThrows(IllegalArgumentException.class, () -> Message.fromJson(json));
         }
     }
 
     @ParameterizedTest
     @MethodSource("provideInvalidMessageParameters")
     void invalidMessageParameters(String username, String text, ZonedDateTime timestamp) {
-        assertThrows(NullPointerException.class, () -> {
-            new Message(username, text, timestamp);
-        });
+        assertThrows(NullPointerException.class, () -> new Message(username, text, timestamp));
     }
 
     private static Stream<org.junit.jupiter.params.provider.Arguments> provideInvalidMessageParameters() {
@@ -76,16 +71,16 @@ class MessageTest {
 
     @Test
     void getUsername() {
-        assertEquals(testUsername, testMessage.getUsername());
+        assertEquals(testUsername, testMessage.username());
     }
 
     @Test
     void getText() {
-        assertEquals(testMessageText, testMessage.getText());
+        assertEquals(testMessageText, testMessage.text());
     }
 
     @Test
     void getTimestamp() {
-        assertEquals(timestamp, testMessage.getTimestamp());
+        assertEquals(timestamp, testMessage.timestamp());
     }
 }

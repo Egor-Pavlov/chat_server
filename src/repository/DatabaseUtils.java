@@ -19,7 +19,6 @@ import org.apache.logging.log4j.Logger;
 public class DatabaseUtils {
 
     private static final Logger logger = LogManager.getLogger(Main.class);
-    private ConfigLoader configLoader;
 
     private String url = "jdbc:mariadb://127.0.0.1:3306/chat";
     private String user = "javauser";
@@ -29,7 +28,6 @@ public class DatabaseUtils {
     public DatabaseUtils(ConfigLoader configLoader) {
         logger.info("Initializing database...");
         if (configLoader != null) {
-            this.configLoader = configLoader;
             url = configLoader.getProperty("database.url");
             user = configLoader.getProperty("database.user");
             password = configLoader.getProperty("database.password");
@@ -50,7 +48,7 @@ public class DatabaseUtils {
         List<Message> history = new ArrayList<>();
         String query = "SELECT * FROM messages";
         if (historySize >= 0) {
-            query = "SELECT * FROM (SELECT * FROM messages ORDER BY id DESC LIMIT " + historySize + ") subquery ORDER BY id ASC;";
+            query = "SELECT * FROM (SELECT * FROM messages ORDER BY id DESC LIMIT " + historySize + ") subquery ORDER BY id;";
         }
         logger.debug("query: " + query);
 
@@ -98,15 +96,15 @@ public class DatabaseUtils {
         try (Connection connection = DriverManager.getConnection(url, user, password);
              PreparedStatement statement = connection.prepareStatement("INSERT INTO messages (username, message, timestamp, timezone) VALUES (?, ?, ?, ?)")) {
 
-            statement.setString(1, message.getUsername());
-            statement.setString(2, message.getText());
+            statement.setString(1, message.username());
+            statement.setString(2, message.text());
 
             // Преобразование ZonedDateTime в Timestamp
-            Timestamp timestamp = Timestamp.from(message.getTimestamp().toInstant());
+            Timestamp timestamp = Timestamp.from(message.timestamp().toInstant());
             statement.setTimestamp(3, timestamp);
 
             // Добавление таймзоны
-            statement.setString(4, message.getTimestamp().getZone().getId());
+            statement.setString(4, message.timestamp().getZone().getId());
             logger.debug("query:" + statement);
             statement.executeUpdate();
             return true;

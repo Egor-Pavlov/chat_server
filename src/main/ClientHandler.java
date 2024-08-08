@@ -4,7 +4,6 @@ import configLoader.ConfigLoader;
 import model.Message;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.platform.engine.support.hierarchical.ThrowableCollector;
 import repository.DatabaseUtils;
 
 import java.io.BufferedReader;
@@ -12,12 +11,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.net.SocketException;
 import java.sql.*;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -141,7 +136,7 @@ public class ClientHandler implements Runnable {
     void broadcast(Message message) {
         logger.debug("Start broadcast send new message: " + message.toJson());
         try {
-            Message messageFromDB = databaseUtils.getLastMessage(message.getUsername(), message.getText());
+            Message messageFromDB = databaseUtils.getLastMessage(message.username(), message.text());
             logger.debug("Message from DB: " + messageFromDB.toJson());
             if (messageFromDB != null) {
                 logger.debug("Sending to clients");
