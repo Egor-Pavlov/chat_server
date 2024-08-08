@@ -1,6 +1,8 @@
 package model;
+
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
 
 public class Message {
     private String username;
@@ -8,9 +10,9 @@ public class Message {
     private ZonedDateTime timestamp;
 
     public Message(String username, String text, ZonedDateTime timestamp) {
-        this.username = username;
-        this.text = text;
-        this.timestamp = timestamp;
+        this.username = Objects.requireNonNull(username, "Username cannot be null");
+        this.text = Objects.requireNonNull(text, "Text cannot be null");
+        this.timestamp = Objects.requireNonNull(timestamp, "Timestamp cannot be null");
     }
 
     public String getUsername() {
@@ -26,16 +28,20 @@ public class Message {
     }
 
     public String toJson() {
-        //DateTimeFormatter formatter = DateTimeFormatter.ISO_ZONED_DATE_TIME; .format(formatter)
+        DateTimeFormatter formatter = DateTimeFormatter.ISO_ZONED_DATE_TIME;
         return String.format("{\"username\":\"%s\",\"text\":\"%s\",\"timestamp\":\"%s\"}",
-                username, text, timestamp);
+                username, text, timestamp.format(formatter));
     }
 
     public static Message fromJson(String json) {
-        String username = json.split("\"username\":\"")[1].split("\"")[0];
-        String text = json.split("\"text\":\"")[1].split("\"")[0];
-        String timestampStr = json.split("\"timestamp\":\"")[1].split("\"")[0];
-        ZonedDateTime timestamp = ZonedDateTime.parse(timestampStr, DateTimeFormatter.ISO_ZONED_DATE_TIME);
-        return new Message(username, text, timestamp);
+        try {
+            String username = json.split("\"username\":\"")[1].split("\"")[0];
+            String text = json.split("\"text\":\"")[1].split("\"")[0];
+            String timestampStr = json.split("\"timestamp\":\"")[1].split("\"")[0];
+            ZonedDateTime timestamp = ZonedDateTime.parse(timestampStr, DateTimeFormatter.ISO_ZONED_DATE_TIME);
+            return new Message(username, text, timestamp);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid JSON format", e);
+        }
     }
 }

@@ -33,7 +33,9 @@ public class ClientHandler implements Runnable {
     private Socket socket;
     //Список всех клиентов нужен, чтобы разослать всем новое сообщение
     private List<ClientHandler> clients;
+    //имя пользователя за которым закрепляется обработчик
     private String Username;
+    //остальные имена пользователей (для проверки уникальности)
     private Set<String> usernames;
     PrintWriter out;
     BufferedReader in;
