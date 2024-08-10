@@ -16,15 +16,20 @@ import model.Message;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+/**
+ * Класс с методами работы с БД
+ */
 public class DatabaseUtils {
-
     private static final Logger logger = LogManager.getLogger(Main.class);
-
     private String url = "jdbc:mariadb://127.0.0.1:3306/chat";
     private String user = "javauser";
     private String password = "javapassword";
     private int historySize = 10;
 
+    /**
+     * Чтение параметров подключения к БД
+     * @param configLoader - инструмент чтения конфигурации
+     */
     public DatabaseUtils(ConfigLoader configLoader) {
         logger.info("Initializing database...");
         if (configLoader != null) {
@@ -34,16 +39,19 @@ public class DatabaseUtils {
             historySize = Integer.parseInt(configLoader.getProperty("history.size"));
         }
         else {
-
             logger.error("Start with default configuration");
         }
-
         logger.debug("database url: " + url);
         logger.debug("database user: " + user);
         logger.debug("database password: " + password);
         logger.debug("database history size: " + historySize);
     }
 
+    /**
+     *Получение истории сообщений для отправки пользователю при подключении
+     * @return - список сообщений
+     * @throws SQLException
+     */
     public List<Message> getHistory() throws SQLException {
         List<Message> history = new ArrayList<>();
         String query = "SELECT * FROM messages";
@@ -68,6 +76,14 @@ public class DatabaseUtils {
         }
         return history;
     }
+
+    /**
+     * Получение сообщения из БД. Нужно, чтобы вытащить время сохранения сообщения
+     * @param username - имя отправителя
+     * @param messageText - текст сообшения
+     * @return объект сообщения
+     * @throws SQLException
+     */
     public Message getLastMessage(String username, String messageText) throws SQLException {
         String query = "SELECT * FROM messages WHERE username=? AND message=? ORDER BY id DESC LIMIT 1;";
         Message message = null;
@@ -92,6 +108,12 @@ public class DatabaseUtils {
         return message;
     }
 
+    /**
+     * Сохранения сообщения в БД
+     * @param message
+     * @return
+     * @throws SQLException
+     */
     public boolean saveMessage(Message message) throws SQLException {
         try (Connection connection = DriverManager.getConnection(url, user, password);
              PreparedStatement statement = connection.prepareStatement("INSERT INTO messages (username, message, timestamp, timezone) VALUES (?, ?, ?, ?)")) {
@@ -111,7 +133,11 @@ public class DatabaseUtils {
         }
     }
 
-    // Метод для чтения содержимого файла
+    /**
+     * Метод для чтения файла schema.sql
+     * @param filePath - путь к файлу со схемой БД
+     * @return
+     */
     public String readSQLFile(String filePath) {
         logger.debug("Reading SQL file: " + filePath);
         InputStream inputStream = Main.class.getClassLoader().getResourceAsStream(filePath);
@@ -126,6 +152,9 @@ public class DatabaseUtils {
         }
     }
 
+    /**
+     * Метод создания таблицы при запуске сервиса
+     */
     public void initializeDB() {
         logger.info("Connecting to database...");
         try (Connection connection = DriverManager.getConnection(url, user, password);

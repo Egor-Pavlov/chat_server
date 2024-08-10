@@ -1,9 +1,7 @@
 package main;
 
-import configLoader.ConfigLoader;
 import model.Message;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -16,14 +14,10 @@ import java.net.Socket;
 import java.sql.SQLException;
 import java.time.ZonedDateTime;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 public class ClientHandlerTest {
@@ -31,18 +25,20 @@ public class ClientHandlerTest {
     private Socket socket;
     private List<ClientHandler> clients;
     private Set<String> usernames;
-    private ConfigLoader configLoader;
     private DatabaseUtils databaseUtils;
     private ClientHandler clientHandler;
     private BufferedReader in;
     private PrintWriter out;
 
+    /**
+     * Подготовка к тесту. Создание заглушек сокета, списков клиентов и имен активных пользователей
+     * @throws Exception
+     */
     @BeforeEach
     public void setUp() throws Exception {
         socket = mock(Socket.class);
         clients = mock(List.class);
         usernames = mock(Set.class);
-        configLoader = mock(ConfigLoader.class);
         databaseUtils = mock(DatabaseUtils.class);
 
         in = mock(BufferedReader.class);
@@ -51,13 +47,16 @@ public class ClientHandlerTest {
         when(socket.getInputStream()).thenReturn(mock(java.io.InputStream.class));
         when(socket.getOutputStream()).thenReturn(mock(java.io.OutputStream.class));
 
-        clientHandler = new ClientHandler(socket, clients, usernames, configLoader, databaseUtils);
+        clientHandler = new ClientHandler(socket, clients, usernames, databaseUtils);
         clientHandler.in = in;
         clientHandler.out = out;
     }
 
-    //Источник данных для теста
-    private static Stream<Arguments> provideHistoryData() {
+    /**
+     * Источник данных для теста получения истории сообщений. Наборы на 1 и несколько сообщений
+     *
+     */
+        private static Stream<Arguments> provideHistoryData() {
         return Stream.of(
                 Arguments.of(
                         List.of(
@@ -90,6 +89,11 @@ public class ClientHandlerTest {
         );
     }
 
+    /**
+     * Тест метода getHistory. Сообщения из метода-источника данных сравниваются с результатом работы метода
+     * @param history - сообщения "из БД"
+     * @throws SQLException
+     */
     @ParameterizedTest
     @MethodSource("provideHistoryData")
     public void testGetHistory(List<Message> history) throws SQLException {
@@ -112,17 +116,33 @@ public class ClientHandlerTest {
         assertEquals(expectedHistory, actualHistory);
     }
 
+    /**
+     * Тест метода SaveMessageToDB
+     * @param testUsername - имя отправителя сообщения
+     * @param testText - текст сообщения
+     * @param testDate - дата и время отправки
+     * @throws SQLException
+     */
     @ParameterizedTest
     @CsvSource("tester123, message 123, 2024-08-08T17:00:00Z")
     public void testSaveToDB(String testUsername, String testText, ZonedDateTime testDate) throws SQLException {
         Message message = new Message(testUsername, testText, testDate);
+        //заглушка сохранения
         when(databaseUtils.saveMessage(message)).thenReturn(true);
-
+        //вызов
         clientHandler.saveMessageToDB(message);
-
+        //проверка
         verify(databaseUtils, times(1)).saveMessage(message);
     }
 
+    /**
+     * Тест метода Broadcsast. Тесовое сообщение рассылается заглушкам клиентов.
+     * @param clientsCount - количество клиентов для рассылки
+     * @param testUsername - имя отправителя
+     * @param testText - текст сообщения
+     * @param testDate - дата отправки
+     * @throws Exception
+     */
     @ParameterizedTest
     @CsvSource("10, tester123, message 123, 2024-08-08T17:00:00Z")
     public void testBroadcast(int clientsCount, String testUsername, String testText, ZonedDateTime testDate) throws Exception {
@@ -134,12 +154,12 @@ public class ClientHandlerTest {
             Socket socket = mock(Socket.class);
             BufferedReader in = mock(BufferedReader.class);
             PrintWriter out = mock(PrintWriter.class);
-
+            //установка поведения заглушек
             when(socket.getInputStream()).thenReturn(mock(java.io.InputStream.class));
             when(socket.getOutputStream()).thenReturn(mock(java.io.OutputStream.class));
             when(databaseUtils.getLastMessage(anyString(), anyString())).thenReturn(message);
 
-            ClientHandler clientHandler = new ClientHandler(socket, clients, usernames, configLoader, databaseUtils);
+            ClientHandler clientHandler = new ClientHandler(socket, clients, usernames, databaseUtils);
             clientHandler.in = in;
             clientHandler.out = out;
 
@@ -156,13 +176,18 @@ public class ClientHandlerTest {
         }
     }
 
+    /**
+     * Тест метода Disconnect. Пользователь создается и после проверяется, что он удален из списков обработчиков и имен активных пользователей
+     * @param username
+     */
     @ParameterizedTest
     @CsvSource("Antonio Banderos")
     public void testDisconnect(String username) {
         clients = new ArrayList<>();
         usernames = new HashSet<>();
         //создаем обработчик клиента
-        ClientHandler clientHandler = new ClientHandler(socket, clients, usernames, configLoader, databaseUtils);
+        ClientHandler clientHandler = new ClientHandler(socket, clients, usernames, databaseUtils);
+        clientHandler.Username = username;
         //добавляем в список обработчиков и имен пользователей
         clients.add(clientHandler);
         usernames.add(username);
@@ -170,12 +195,17 @@ public class ClientHandlerTest {
         clientHandler.disconnect();
         //Проверяем
         assertTrue(clients.isEmpty());
-        assertTrue(usernames.isEmpty());
-
-        verify(usernames.remove(username), times(1));
-        verify(clients.remove(clientHandler), times(1));
+        assert (!usernames.contains(username));
     }
 
+    /**
+     * Тест регистрации пользователя при подключении. Создается имя пользователя в массиве активных и имитируется подключение нового.
+     * Есть сценарий, когда имя свободно и занято.
+     * @param existedUsername
+     * @param newUsername
+     * @param expectedResult
+     * @throws IOException
+     */
     @ParameterizedTest
     @CsvSource({"Tester, Tester, false",
                 "Tester, Tester123, true"})
@@ -187,7 +217,7 @@ public class ClientHandlerTest {
         usernames = new HashSet<>();
         usernames.add(existedUsername);
         //создание нового обработчика
-        ClientHandler clientHandler = new ClientHandler(socket, clients, usernames, configLoader, databaseUtils);
+        ClientHandler clientHandler = new ClientHandler(socket, clients, usernames, databaseUtils);
         clientHandler.out = out;
         //Проверка регистрации с указанным именем пользователя
         assertEquals(expectedResult, clientHandler.registerUser(newUsername));

@@ -1,6 +1,5 @@
 package main;
 
-import configLoader.ConfigLoader;
 import model.Message;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -29,14 +28,20 @@ public class ClientHandler implements Runnable {
     //Список всех клиентов нужен, чтобы разослать всем новое сообщение
     private List<ClientHandler> clients;
     //имя пользователя за которым закрепляется обработчик
-    private String Username;
+    String Username;
     //остальные имена пользователей (для проверки уникальности)
     private Set<String> usernames;
     PrintWriter out;
     BufferedReader in;
 
-
-    public ClientHandler(Socket socket, List<ClientHandler> clients, Set<String> usernames, ConfigLoader configLoader, DatabaseUtils databaseUtils) {
+    /**
+     * Конструктор
+     * @param socket - сокет для работы с клиентским приложением
+     * @param clients - список других обработчиков для клиентов
+     * @param usernames - список имен активных пользователей
+     * @param databaseUtils
+     */
+    public ClientHandler(Socket socket, List<ClientHandler> clients, Set<String> usernames, DatabaseUtils databaseUtils) {
         logger.info("Initializing Client Handler");
         this.socket = socket;
         this.clients = clients;
@@ -100,6 +105,12 @@ public class ClientHandler implements Runnable {
             disconnect();
         }
     }
+
+    /**
+     * Метод "регистрации" пользователя в системе. Имя проверяется на уникальность и если оно уникально - то добавляется в список пользователей
+     * @param username - login нового пользователя
+     * @return - true при успешной регистрации пользователя, false, если имя занято
+     */
     Boolean registerUser(String username){
         // Проверка уникальности имени пользователя
         synchronized (usernames) {
@@ -113,6 +124,10 @@ public class ClientHandler implements Runnable {
             return true;
         }
     }
+
+    /**
+     * Метод предназначен для отключения пользователя и освобождения ресурсов. Поток закрывается и удаляется из списка потоков, имя пользователя удаляется из списка, сокет закрывается
+     */
     void disconnect(){
         try {
             logger.info("Closing client handler due to client disconnect");
@@ -123,6 +138,12 @@ public class ClientHandler implements Runnable {
             e.printStackTrace();
         }
     }
+
+    /**
+     * Обработка входящего сообщения.
+     * Сохранение в БД, рассылка всем пользователям после сохранения
+     * @param message
+     */
     void handleMessage(Message message){
         logger.debug("New incoming message. Message: " + message.toJson());
         saveMessageToDB(message);
@@ -153,7 +174,7 @@ public class ClientHandler implements Runnable {
     }
 
     /**
-     * Логирование сообщения в БД
+     * Сохранение сообщения в БД
      * @param message - полученное сообщение
      */
     public void saveMessageToDB(Message message) {

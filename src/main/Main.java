@@ -5,19 +5,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import repository.DatabaseUtils;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.*;
-import java.util.stream.Collectors;
 
+/**
+ * Точка входа в серверную частб
+ */
 public class Main {
     private static final Logger logger = LogManager.getLogger(Main.class);
     static ConfigLoader configLoader = new ConfigLoader("application.properties");
@@ -29,6 +24,10 @@ public class Main {
     private static List<ClientHandler> clients = Collections.synchronizedList(new ArrayList<>());
     private static Set<String> usernames = Collections.synchronizedSet(new HashSet<>());
 
+    /**
+     * Чтение конфигурации и запуск сервера, создание обработчиков при подключении клиентов
+     * @param args
+     */
     public static void main(String[] args) {
         databaseUtils.initializeDB();
         //подключаем сервер к сокету
@@ -40,7 +39,7 @@ public class Main {
                 Socket clientSocket = serverSocket.accept();
                 logger.info("Start new client connection...");
                 //создаем обработчик на новый запрос
-                ClientHandler clientHandler = new ClientHandler(clientSocket, clients, usernames, configLoader, databaseUtils);
+                ClientHandler clientHandler = new ClientHandler(clientSocket, clients, usernames, databaseUtils);
                 logger.info("New client connected.");
                 //добавляем в список
                 clients.add(clientHandler);
