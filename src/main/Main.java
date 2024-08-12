@@ -11,7 +11,7 @@ import java.net.Socket;
 import java.util.*;
 
 /**
- * Точка входа в серверную частб
+ * Точка входа в серверную часть
  */
 public class Main {
     private static final Logger logger = LogManager.getLogger(Main.class);

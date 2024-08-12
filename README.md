@@ -17,12 +17,18 @@
   <summary>Структура проекта</summary>
 
 ```bash
+├.
 ├── lib
 │   ├── apache-log4j-2.23.1-bin.zip
+│   ├── byte-buddy-1.12.22.jar
+│   ├── byte-buddy-agent-1.12.22.jar
 │   ├── log4j-api-2.23.1.jar
 │   ├── log4j-core-2.23.1.jar
 │   ├── log4j-docker-2.23.1.jar
-│   └── mariadb-java-client-3.4.0.jar
+│   ├── mariadb-java-client-3.4.0.jar
+│   ├── mockito-core-5.0.0.jar
+│   ├── mockito-junit-jupiter-5.0.0.jar
+│   └── mysql-connector-j-9.0.0.jar
 ├── out
 │   ├── artifacts
 │   │   └── chat_SE_jar
@@ -53,11 +59,19 @@
 │   ├── main
 │   │   ├── ClientHandler.java
 │   │   └── Main.java
+│   ├── model
+│   │   └── Message.java
+│   └── repository
+│       └── DatabaseUtils.java
+├── tests
+│   ├── main
+│   │   └── ClientHandlerTest.java
 │   └── model
-│       └── Message.java
+│       └── MessageTest.java
 ├── chat_SE.iml
 ├── Dockerfile
 └── README.md
+
 ```
 </details>
 
