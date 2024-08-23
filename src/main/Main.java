@@ -26,7 +26,6 @@ public class Main {
 
     /**
      * Чтение конфигурации и запуск сервера, создание обработчиков при подключении клиентов
-     * @param args
      */
     public static void main(String[] args) {
         databaseUtils.initializeDB();
@@ -47,7 +46,7 @@ public class Main {
                 new Thread(clientHandler).start();
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error(e);
         }
     }
 }

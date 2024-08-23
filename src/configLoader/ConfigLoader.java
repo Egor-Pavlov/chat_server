@@ -1,5 +1,9 @@
 package configLoader;
 
+import main.Main;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
@@ -9,7 +13,7 @@ import java.util.Properties;
  */
 public class ConfigLoader {
     private final Properties properties;
-
+    private static final Logger logger = LogManager.getLogger(Main.class);
     /**
      * Открытие файла
      * @param fileName - имя файла конфигурации
@@ -22,8 +26,8 @@ public class ConfigLoader {
                 return;
             }
             properties.load(input);
-        } catch (IOException ex) {
-            ex.printStackTrace();
+        } catch (IOException e) {
+            logger.error(e);
         }
     }
 

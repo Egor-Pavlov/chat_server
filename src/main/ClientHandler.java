@@ -24,7 +24,7 @@ import java.util.Set;
 public class ClientHandler implements Runnable {
     private static final Logger logger = LogManager.getLogger(Main.class);
     DatabaseUtils databaseUtils;
-    private Socket socket;
+    private final Socket socket;
     //Список всех клиентов нужен, чтобы разослать всем новое сообщение
     private List<ClientHandler> clients;
     //имя пользователя за которым закрепляется обработчик
@@ -39,7 +39,7 @@ public class ClientHandler implements Runnable {
      * @param socket - сокет для работы с клиентским приложением
      * @param clients - список других обработчиков для клиентов
      * @param usernames - список имен активных пользователей
-     * @param databaseUtils
+     * @param databaseUtils - инструмент работы с бд
      */
     public ClientHandler(Socket socket, List<ClientHandler> clients, Set<String> usernames, DatabaseUtils databaseUtils) {
         logger.info("Initializing Client Handler");
@@ -61,7 +61,7 @@ public class ClientHandler implements Runnable {
             return history.stream().map(Message::toJson).toList();
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error(e);
         }
         return List.of();
     }
@@ -99,7 +99,7 @@ public class ClientHandler implements Runnable {
                 logger.debug("Client connection closed");
             }
             else {
-                e.printStackTrace();
+                logger.error(e);
             }
         } finally {
             disconnect();
@@ -120,7 +120,7 @@ public class ClientHandler implements Runnable {
                 return false;
             }
             usernames.add(username);
-            logger.debug("User \"" + username + "\" added to chat");
+            logger.debug("User \"{}\" added to chat", username);
             return true;
         }
     }
@@ -135,17 +135,17 @@ public class ClientHandler implements Runnable {
             clients.remove(this);
             socket.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error(e);
         }
     }
 
     /**
      * Обработка входящего сообщения.
      * Сохранение в БД, рассылка всем пользователям после сохранения
-     * @param message
+     * @param message - сообщение которое надо обработать.
      */
     void handleMessage(Message message){
-        logger.debug("New incoming message. Message: " + message.toJson());
+        logger.debug("New incoming message. Message: {}", message.toJson());
         saveMessageToDB(message);
         broadcast(message);
     }
@@ -155,21 +155,19 @@ public class ClientHandler implements Runnable {
      * @param message - сообщение для рассылки
      */
     void broadcast(Message message) {
-        logger.debug("Start broadcast send new message: " + message.toJson());
+        logger.debug("Start broadcast send new message: {}", message.toJson());
         try {
             Message messageFromDB = databaseUtils.getLastMessage(message.username(), message.text());
-            logger.debug("Message from DB: " + messageFromDB.toJson());
-            if (messageFromDB != null) {
-                logger.debug("Sending to clients");
-                synchronized (clients) {
-                    for (ClientHandler client : clients) {
-                        client.out.println(messageFromDB.toJson());
-                    }
+            logger.debug("Message from DB: {}", messageFromDB.toJson());
+            logger.debug("Sending to clients");
+            synchronized (clients) {
+                for (ClientHandler client : clients) {
+                    client.out.println(messageFromDB.toJson());
                 }
             }
         }
         catch (SQLException e) {
-            e.printStackTrace();
+            logger.error(e);
         }
     }
 
@@ -178,13 +176,13 @@ public class ClientHandler implements Runnable {
      * @param message - полученное сообщение
      */
     public void saveMessageToDB(Message message) {
-        logger.debug("Saving new message to DB. Message: " + message.toJson());
+        logger.debug("Saving new message to DB. Message: {}", message.toJson());
         try{
             if (databaseUtils.saveMessage(message)) {
                 logger.debug("Message saved to database");
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error(e);
         }
     }
 }

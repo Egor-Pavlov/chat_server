@@ -41,16 +41,15 @@ public class DatabaseUtils {
         else {
             logger.error("Start with default configuration");
         }
-        logger.debug("database url: " + url);
-        logger.debug("database user: " + user);
-        logger.debug("database password: " + password);
-        logger.debug("database history size: " + historySize);
+        logger.debug("database url: {}", url);
+        logger.debug("database user: {}", user);
+        logger.debug("database password: {}", password);
+        logger.debug("database history size: {}", historySize);
     }
 
     /**
      *Получение истории сообщений для отправки пользователю при подключении
      * @return - список сообщений
-     * @throws SQLException
      */
     public List<Message> getHistory() throws SQLException {
         List<Message> history = new ArrayList<>();
@@ -80,9 +79,8 @@ public class DatabaseUtils {
     /**
      * Получение сообщения из БД. Нужно, чтобы вытащить время сохранения сообщения
      * @param username - имя отправителя
-     * @param messageText - текст сообшения
+     * @param messageText - текст сообщения
      * @return объект сообщения
-     * @throws SQLException
      */
     public Message getLastMessage(String username, String messageText) throws SQLException {
         String query = "SELECT * FROM messages WHERE username=? AND message=? ORDER BY id DESC LIMIT 1;";
@@ -110,9 +108,8 @@ public class DatabaseUtils {
 
     /**
      * Сохранения сообщения в БД
-     * @param message
-     * @return
-     * @throws SQLException
+     * @param message - Сообщение для сохранения
+     * @return true в случае успешного сохранения
      */
     public boolean saveMessage(Message message) throws SQLException {
         try (Connection connection = DriverManager.getConnection(url, user, password);
@@ -125,7 +122,7 @@ public class DatabaseUtils {
             Timestamp timestamp = Timestamp.from(message.timestamp().toInstant());
             statement.setTimestamp(3, timestamp);
 
-            // Добавление таймзоны
+            // Добавление тайм зоны
             statement.setString(4, message.timestamp().getZone().getId());
             logger.debug("query:" + statement);
             statement.executeUpdate();
@@ -136,10 +133,10 @@ public class DatabaseUtils {
     /**
      * Метод для чтения файла schema.sql
      * @param filePath - путь к файлу со схемой БД
-     * @return
+     * @return - запрос на создание таблицы или null
      */
     public String readSQLFile(String filePath) {
-        logger.debug("Reading SQL file: " + filePath);
+        logger.debug("Reading SQL file: {}", filePath);
         InputStream inputStream = Main.class.getClassLoader().getResourceAsStream(filePath);
         if (inputStream == null) {
             throw new IllegalArgumentException("File not found! " + filePath);
@@ -147,7 +144,7 @@ public class DatabaseUtils {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
             return reader.lines().collect(Collectors.joining("\n"));
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error(e);
             return null;
         }
     }
@@ -165,7 +162,7 @@ public class DatabaseUtils {
             logger.info("Table 'messages' created or already exists.");
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error(e);
         }
         logger.info("Database initialized and connected.");
     }
